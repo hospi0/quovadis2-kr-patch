@@ -19,3 +19,4 @@ work/movie/*
 !work/movie/asr/*.tsv
 !work/files.txt
 !work/dirs.txt
+!work/poc_sub.png
