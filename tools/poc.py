@@ -75,6 +75,11 @@ def test(b, lab):
     m.w32(0x0608B348 + 0x34, 5)                                       # 재생 끝 → 꺼짐
     S.run(m, lab['vbi'], calls={H.ORIG: lambda r, mm: None})
     ra, rb = walk(m, H.LA), walk(m, H.LB); print('꺼짐: A %s · B %s' % (ra[1], rb[1])); ok &= ra[1] == rb[1] == 'END'
+    m = mk(); m.w8(0x060A575B, 0x00); m.w8(0x060A56D7, 0xFF)           # 위가 말함 → 위쪽 자리
+    S.run(m, lab['vbi'], calls={H.ORIG: lambda r, mm: None})
+    xy = (m.r16(H.OWN + 12), m.r16(H.OWN + 14)); print('위가 말함: XA,YA =', xy); ok &= xy == (H.XT, H.YT)
+    m = mk(); xy0 = None; S.run(m, lab['vbi'], calls={H.ORIG: lambda r, mm: None})
+    xy0 = (m.r16(H.OWN + 12), m.r16(H.OWN + 14)); print('아래가 말함(스테이트 그대로): XA,YA =', xy0); ok &= xy0 == (H.X, H.Y)
     m = mk(); m.w32(0x0608B348 + 8, 0x1234)                           # 다른 조각 → 안 켜짐
     S.run(m, lab['vbi'], calls={H.ORIG: lambda r, mm: None})
     ra, rb = walk(m, H.LA), walk(m, H.LB); print('다른 조각: A %s · B %s' % (ra[1], rb[1])); ok &= ra[1] == rb[1] == 'END'

@@ -28,7 +28,9 @@ TEX = 0x25C0A000; LUT = 0x25C0B4E0; OWN = 0x25C0B560
 TEXA = (TEX & 0x7FFFF) // 8; LUTA = (LUT & 0x7FFFF) // 8; OWNL = (OWN & 0x7FFFF) // 8
 assert OWN + 64 <= 0x25C0B5C0
 W8, HT = 20, 41                         # 그림 160×41 (4비트)
-X, Y = 100, 176                         # 화면 좌표(지역 좌표 0,0) — 아래 왼쪽 얼굴(x<98)·오른쪽 레이더(x>261) 사이
+X, Y = 100, 176                         # 아래쪽 화면 좌표(지역 좌표 0,0) — 아래 왼쪽 얼굴(x<98)·오른쪽 레이더(x>261) 사이
+XT, YT = 82, 4                          # 위쪽 — 위 얼굴(x<82)·오른쪽 위 HUD «待機»(x≥240) 사이
+WIN_BOT = 0x260A56D7; WIN_TOP = 0x260A575B   # 창별 «말하는 중 = 00» 바이트(캐시 거치지 않는 주소)
 TEXN = W8 * 4 * HT                     # VRAM 4비트 크기
 TEX2 = TEXN // 2                       # 2비트 원본 크기
 def keyoff(ln): return (ln >> 3) << 2      # 열쇠 4 B 위치 = 조각 가운데(앞쪽은 AIFF 머리·무음이라 0)
@@ -57,6 +59,12 @@ def assemble(keylen, key4):
     a.ld(1, D_TEX); a.ld(2, TEX); a.ld(3, TEX2); a.br('bsr', 'expand'); W(0x0009)
     a.ld(1, D_LUT); a.ld(2, LUT); W(0xE308); a.br('bsr', 'copy'); W(0x0009)
     a.ld(1, D_CMD); a.ld(2, OWN); W(0xE310); a.br('bsr', 'copy'); W(0x0009)
+    # ★화자 쪽(2026-10-11, 하스피 스테이트 위 3·아래 5 대조): 창마다 «말하는 중이면 00» — 아래 창 0x060A56D7 · 위 창 0x060A575B (미션 중 대사 없으면 둘 다 FF)
+    #   위 창 00 이고 아래 창 FF 면 위쪽 자리(위 얼굴 x<82 와 HUD «待機» x≥240 사이), 아니면 아래쪽(우리 칸 기본값)
+    a.ld(1, WIN_TOP); W(0x6010, 0x600C, 0x8800); a.br('bf', 'side')
+    a.ld(1, WIN_BOT); W(0x6010, 0x600C, 0x8800); a.br('bt', 'side')
+    a.ld(1, OWN); W(0xE000 | XT, 0x8116, 0xE000 | YT, 0x8117)          # 우리 칸 XA·YA = 위쪽
+    a.L('side')
     a.ld(1, LA); a.br('bsr', 'ins'); W(0x0009)
     a.ld(1, LB); a.br('bsr', 'ins'); W(0x0009)
     a.ld(1, VAR); W(0xE001, 0x2102)                                     # 깃발 = 1
