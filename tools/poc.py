@@ -50,7 +50,8 @@ def test(b, lab):
     m0 = state.ram(STATE)
     def mk():
         m = S.Mem(); m.add(0x06000000, 0x100000, m0['H']); m.add(0x00200000, 0x100000, m0['L']); m.add(0x05C00000, 0x80000, m0['V1'])
-        hb = m._f(H.AREA)[0]; hb[H.AREA - 0x06000000:H.AREA - 0x06000000 + len(b)] = b
+        hb = m._f(0x06000000)[0]
+        for a, x in b.items(): hb[a - 0x06000000:a - 0x06000000 + len(x)] = x
         return m
     def walk(m, a):
         seen = set()
@@ -62,7 +63,7 @@ def test(b, lab):
     ok = True
     m = mk(); S.run(m, lab['vbi'], calls={H.ORIG: lambda r, mm: None})
     ra, rb = walk(m, H.LA), walk(m, H.LB)
-    tex_ok = bytes(m.r8(H.TEX + i) for i in range(H.TEXN)) == b[:H.TEXN]
+    tex_ok = bytes(m.r8(H.TEX + i) for i in range(H.TEXN)) == TEX4
     own = [m.r16(H.OWN + 2 * i) for i in range(8)]
     print('켜짐: A %s · B %s · 그림 %s · 우리 칸 %s · 다음 END %04X' % (ra[1], rb[1], tex_ok, ' '.join('%04X' % x for x in own), m.r16(H.OWN + 32)))
     ok &= ra[1] == rb[1] == 'OURS' and tex_ok and m.r16(H.OWN + 32) == 0x8000
@@ -80,11 +81,12 @@ def test(b, lab):
 
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
-    tex, px = render(LINES)
+    global TEX4
+    TEX4, px = render(LINES)
     pal = np.array([(40, 40, 60), (0, 0, 0), (255, 255, 255)], np.uint8)
     Image.fromarray(pal[px]).resize((px.shape[1] * 4, px.shape[0] * 4), Image.NEAREST).save(os.path.join(ROOT, 'work', 'poc_sub.png'))
     kl, k4 = key(); print('열쇠 길이 0x%X · +0x%X = %08X' % (kl, H.keyoff(kl), k4))
-    b, lab = H.blob(tex, kl, k4); print('묶음 %d B (%08X‥%08X) · 진입 %08X' % (len(b), H.AREA, H.AREA + len(b), lab['vbi']))
+    b, lab = H.blob(px, kl, k4); print('묶음', ' · '.join('%08X+%d B' % (a, len(x)) for a, x in b.items()), '· 진입 %08X' % lab['vbi'])
     assert test(b, lab)
     if '--write' in sys.argv:
         import iso
