@@ -21,3 +21,5 @@ work/movie/*
 !work/dirs.txt
 !work/poc_sub.png
 !work/movie/list.tsv
+!work/movie/movie_ko.py
+!work/movie/asr_all.txt
