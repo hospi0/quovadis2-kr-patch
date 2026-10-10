@@ -14,8 +14,13 @@ _m = importlib.util.module_from_spec(_sp); _sp.loader.exec_module(_m); A = _m.A
 
 LOAD = 0x06004000                       # 0.BIN 적재
 VBI_LIT = 0x06009814; ORIG = 0x06043294
-TEX_AREA = (0x060AD080, 0x060AD840)    # 2비트 그림 원본
-CODE_AREA = (0x060ADDC0, 0x060AE180)   # LUT·우리 칸·코드
+# ★실행 자리 RUN = 상위 RAM 0x060FC000‥(스택 0x060FF000 아래, 스테이트 24장 최저 스택 0x060FEB70, 0.BIN 상수가 가리키는 마지막 0x060FBFE0)
+#   0.BIN 안 자리는 BSS(부팅 때 지움)·오버레이(실행 중 덮어씀)라 상주 불가(PoC 1·2차 부팅불가) → 디스크엔 0.BIN 뒤쪽(부팅 직후엔 온전)에 담고
+#   시작 코드의 main 점프 상수 0x0600404C(원래 0x0600406C) → 우리 init(복사 후 main 으로).
+RUN = 0x060FC000; RUN_END = 0x060FD800
+TEX_AREA = (0x060AD080, 0x060AD840)    # 디스크 보관: 2비트 그림
+CODE_AREA = (0x060ADDC0, 0x060AE180)   # 디스크 보관: init + LUT·우리 칸·깃발·코드
+MAIN_LIT = 0x0600404C; MAIN = 0x0600406C
 BSS = (0x06089830, 0x060AA568)
 H0 = 0x2608B348                         # PCM 핸들 0번(캐시 거치지 않는 주소)
 LIST = 0x25C00000; LA = 0x25C000A0; LB = 0x25C05A20
@@ -27,7 +32,7 @@ X, Y = 100, 176                         # 화면 좌표(지역 좌표 0,0) — �
 TEXN = W8 * 4 * HT                     # VRAM 4비트 크기
 TEX2 = TEXN // 2                       # 2비트 원본 크기
 def keyoff(ln): return (ln >> 3) << 2      # 열쇠 4 B 위치 = 조각 가운데(앞쪽은 AIFF 머리·무음이라 0)
-D_TEX = TEX_AREA[0]; D_LUT = CODE_AREA[0]; D_CMD = D_LUT + 32; VAR = D_CMD + 64; CODE = VAR + 4   # VAR = 붙였음 깃발(꺼질 때만 목록 훑기 — 부팅·메뉴에서 매 VBlank 2×1024칸 훑지 않게)
+D_TEX = RUN; D_LUT = RUN + TEX2; D_CMD = D_LUT + 32; VAR = D_CMD + 64; CODE = VAR + 4   # VAR = 붙였음 깃발(꺼질 때만 목록 훑기 — 부팅·메뉴에서 매 VBlank 2×1024칸 훑지 않게)
 
 
 def data():
@@ -107,25 +112,43 @@ def pack2(px):
     return bytes(((f[0::4] << 6) | (f[1::4] << 4) | (f[2::4] << 2) | f[3::4]).tolist())
 
 
+def init_code(rest_len):
+    """CODE_AREA 앞에 놓이는 init: 그림(TEX_AREA)·나머지(init 뒤)를 RUN 으로 복사 → main"""
+    for guess in (0, 1):
+        a = A(CODE_AREA[0]); W = a.w
+        a.L('init'); W(0x4F22)                                          # PR(시작 코드로 돌아갈 곳) 보존
+        a.ld(1, TEX_AREA[0]); a.ld(2, D_TEX); a.ld(3, TEX2 // 4); a.br('bsr', 'cp'); W(0x0009)
+        a.ld(1, 'rest'); a.ld(2, D_LUT); a.ld(3, rest_len // 4); a.br('bsr', 'cp'); W(0x0009)
+        W(0x4F26); a.ld(1, MAIN); W(0x412B, 0x0009)                     # PR 되살리고 main 으로(JMP — main 이 끝나면 시작 코드로)
+        a.L('cp'); a.L('cl'); W(0x6016, 0x2202, 0x7204, 0x4310); a.br('bf', 'cl'); W(0x000B, 0x0009)
+        if guess == 0: a.lab['rest'] = CODE_AREA[0] + 0x100; size = len(a.build()); continue
+        a.lab['rest'] = CODE_AREA[0] + (size + 3) // 4 * 4
+        code = a.build(); assert len(code) == size
+        return code + bytes(a.lab['rest'] - CODE_AREA[0] - len(code)), a.lab
+
+
 def blob(px, keylen, key4):
-    """→ ({주소: 바이트}, 라벨)"""
+    """→ ({0.BIN 주소: 바이트}, 라벨) — 실행 자리 RUN 용 코드, 디스크엔 TEX_AREA·CODE_AREA 에 보관"""
     tex2 = pack2(px); assert len(tex2) == TEX2
     lut, cmd = data(); code, lab = assemble(keylen, key4)
-    parts = {D_TEX: tex2, D_LUT: lut + cmd + bytes(4) + code}
-    assert D_TEX + len(tex2) <= TEX_AREA[1], hex(D_TEX + len(tex2))
-    assert D_LUT + len(parts[D_LUT]) <= CODE_AREA[1], hex(D_LUT + len(parts[D_LUT]))
-    for a, b in parts.items(): assert not (BSS[0] <= a < BSS[1]) and not (BSS[0] < a + len(b) <= BSS[1])
+    rest = lut + cmd + bytes(4) + code; rest += bytes(-len(rest) % 4)
+    assert D_LUT + len(rest) <= RUN_END, hex(D_LUT + len(rest))
+    ini, ilab = init_code(len(rest)); lab.update(ilab)
+    parts = {TEX_AREA[0]: tex2, CODE_AREA[0]: ini + rest}
+    for a, b in parts.items():
+        assert a + len(b) <= {TEX_AREA[0]: TEX_AREA[1], CODE_AREA[0]: CODE_AREA[1]}[a], hex(a + len(b))
+        assert not (BSS[0] <= a < BSS[1])
     return parts, lab
 
 
 def patch_0bin(d0, parts, lab):
     d = bytearray(d0)
-    o = VBI_LIT - LOAD
-    assert struct.unpack_from('>I', d, o)[0] == ORIG
+    for lit, old, new in ((VBI_LIT, ORIG, lab['vbi']), (MAIN_LIT, MAIN, lab['init'])):
+        o = lit - LOAD; assert struct.unpack_from('>I', d, o)[0] == old, hex(lit)
+        struct.pack_into('>I', d, o, new)
     for a, b in parts.items():
         c = a - LOAD
         assert d[c:c + len(b)] == bytes(len(b)), ('자리가 0 이 아님', hex(a))
         d[c:c + len(b)] = b
-    struct.pack_into('>I', d, o, lab['vbi'])
     assert len(d) == len(d0)
     return bytes(d)

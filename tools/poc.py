@@ -51,7 +51,10 @@ def test(b, lab):
     def mk():
         m = S.Mem(); m.add(0x06000000, 0x100000, m0['H']); m.add(0x00200000, 0x100000, m0['L']); m.add(0x05C00000, 0x80000, m0['V1'])
         hb = m._f(0x06000000)[0]
-        for a, x in b.items(): hb[a - 0x06000000:a - 0x06000000 + len(x)] = x
+        hb[H.RUN - 0x06000000:H.RUN_END - 0x06000000] = bytes(H.RUN_END - H.RUN)        # 실행 자리 = 처음엔 0
+        for a, x in b.items(): hb[a - 0x06000000:a - 0x06000000 + len(x)] = x         # 0.BIN 보관 자리(부팅 직후)
+        S.run(m, lab['init'], calls={H.MAIN: lambda r, mm: None})                      # 시작 코드 → init(복사) → main
+        for a, x in b.items(): hb[a - 0x06000000:a - 0x06000000 + len(x)] = bytes(len(x))   # 그 뒤 오버레이가 덮어씀(0 으로 흉내)
         return m
     def walk(m, a):
         seen = set()
