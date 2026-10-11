@@ -9,7 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 
 VER = 'v0.8'
 XDELTA = r'C:\claude\utils\xdelta.exe'
-ROMS = r'C:\claude\roms\ss'
+ROMS = r'C:\claude\roms\ss\완료'
 OUT = os.environ.get('QV_OUT') or os.path.join(ROOT, 'work', 'out_now')
 NAME = 'QuoVadis2_KR_' + VER
 TITLE = '쿼바디스2 - 혹성강습 오반 레이 (QuoVadis 2 - Wakusei Kyoushuu Ovan Rei, 세가 새턴 일본판) 한글 패치 ' + VER   # 공식 한글 제목(하스피 2026-10-11)

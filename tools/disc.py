@@ -3,7 +3,7 @@ r"""쿠오바디스 2 트랙 1 ISO 읽기(2026-10-11, 건담 disc.py 꼴) — fi
 import importlib.util as _iu
 _sp = _iu.spec_from_file_location('_gdisc', r'C:\claude\project\gundam-sabakareshi-kr-patch\tools\disc.py')
 _g = _iu.module_from_spec(_sp); _sp.loader.exec_module(_g)
-BIN = r'C:\claude\roms\ss\QuoVadis 2 - Wakusei Kyoushuu Ovan Rei (Japan) (Disc %d)\QuoVadis 2 - Wakusei Kyoushuu Ovan Rei (Japan) (Disc %d) (Track 1).bin'
+BIN = r'C:\claude\roms\ss\완료\QuoVadis 2 - Wakusei Kyoushuu Ovan Rei (Japan) (Disc %d)\QuoVadis 2 - Wakusei Kyoushuu Ovan Rei (Japan) (Disc %d) (Track 1).bin'
 _cache = {}
 
 
