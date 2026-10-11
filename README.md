@@ -3,8 +3,8 @@
 ## 내려받기
 - 최신 **v0.8** — [릴리즈](https://github.com/hospi0/quovadis2-kr-patch/releases/latest)에서 `QuoVadis2_KR_v0.8.zip`
 - 대상: `QuoVadis 2 - Wakusei Kyoushuu Ovan Rei (Japan)` 2장 (장마다 트랙 2개)
-  - 1장 트랙 1 — 원본md5 `913FC7D76B0763DD48616509B3203314` → 패치md5 `561D50456F0EB31715980F7B7D605713`
-  - 2장 트랙 1 — 원본md5 `BD284547A5D07C7ED7971DF222AC8E5C` → 패치md5 `F92947F9EAEACCCB05BAD7E8BC147120`
+  - 1장 트랙 1 — 원본md5 `913FC7D76B0763DD48616509B3203314` → 패치md5 `2F3854603BA8F96D3EFEC38402A93962`
+  - 2장 트랙 1 — 원본md5 `BD284547A5D07C7ED7971DF222AC8E5C` → 패치md5 `99B6CA95F10D98C58C260CC98C5F0741`
   - 트랙 2(오디오)·cue 는 원본 그대로
 
 ## 바뀌는 것
